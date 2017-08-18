@@ -200,7 +200,7 @@ void displayFiles(void)
 		screen_draw_texture(TEXTURE_HOME_ICON_SELECTED, -2, -2);
 		screen_draw_string(((320 - screen_get_string_width(welcomeMsg, 0.41f, 0.41f)) / 2), 40, 0.41f, 0.41f, RGBA8(BottomScreen_text_colour.r, BottomScreen_text_colour.g , BottomScreen_text_colour.b, 255), welcomeMsg);
 		screen_draw_string(((320 - screen_get_string_width(currDate, 0.41f, 0.41f)) / 2), 60, 0.41f, 0.41f, RGBA8(BottomScreen_text_colour.r, BottomScreen_text_colour.g , BottomScreen_text_colour.b, 255), currDate);
-		screen_draw_stringf(2, 225, 0.41f, 0.41f, RGBA8(BottomScreen_text_colour.r, BottomScreen_text_colour.g , BottomScreen_text_colour.b, 255), "3DShell v%i.%i Beta - %d%02d%02d", VERSION_MAJOR, VERSION_MINOR, YEAR, MONTH, DAY);
+		screen_draw_stringf(2, 225, 0.41f, 0.41f, RGBA8(BottomScreen_text_colour.r, BottomScreen_text_colour.g , BottomScreen_text_colour.b, 255), "3DShell %d.%d.%d Beta - %s", VERSION_MAJOR, VERSION_MINOR, VERSION_MICRO, __DATE__);
 	}
 	else
 		screen_draw_texture(TEXTURE_HOME_ICON, -2, -2);
