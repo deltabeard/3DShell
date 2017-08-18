@@ -1,10 +1,10 @@
 #include "common.h"
-#include "dirlist.h"
-#include "file_operations.h"
-#include "fs.h"
+#include "file/dirlist.h"
+#include "file/file_operations.h"
+#include "file/fs.h"
 #include "keyboard.h"
 #include "main.h"
-#include "screen.h"
+#include "graphics/screen.h"
 #include "utils.h"
 
 #include <fcntl.h>
@@ -22,19 +22,19 @@ Result createFolder(void)
 {
 	char tempFolder[256];
 	strcpy(tempFolder, keyboard_3ds_get(256, "", "Enter name"));
-	
+
 	if (strncmp(tempFolder, "", 1) == 0)
 		mainMenu(KEEP);
-	
+
 	char path[500];
 	strcpy(path, cwd);
-	
+
 	strcat(path, tempFolder);
-	
+
 	Result ret = makeDir(fsArchive, path);
-	
-	mainMenu(CLEAR);	
-	
+
+	mainMenu(CLEAR);
+
 	return ret;
 }
 
@@ -42,10 +42,10 @@ Result renameFile(void)
 {
 	File * file = findindex(position);
 
-	if (file == NULL) 
+	if (file == NULL)
 		return -1;
 
-	if (strncmp(file->name, "..", 2) == 0) 
+	if (strncmp(file->name, "..", 2) == 0)
 		return -2;
 
 	char oldPath[500], newPath[500], name[255];
@@ -53,19 +53,19 @@ Result renameFile(void)
 	strcpy(oldPath, cwd);
 	strcpy(newPath, cwd);
 	strcat(oldPath, file->name);
-	
+
 	strcpy(name, keyboard_3ds_get(255, file->name, "Enter name"));
 	strcat(newPath, name);
-	
+
 	Result ret = 0;
-	
+
 	if (file->isDir)
 		ret = fsRenameDir(fsArchive, oldPath, newPath);
 	else
 		ret = fsRenameFile(fsArchive, oldPath, newPath);
-	
+
 	mainMenu(CLEAR);
-	
+
 	return ret;
 }
 
@@ -75,17 +75,17 @@ Result delete(void)
 	File * file = findindex(position);
 
 	// Not found
-	if (file == NULL) 
+	if (file == NULL)
 		return -1;
 
 	if (sysProtection)
 	{
-		if ((strncmp(file->name, "..", 2) == 0) || (SYS_FILES)) 
+		if ((strncmp(file->name, "..", 2) == 0) || (SYS_FILES))
 			return -2;
 	}
 	else
 	{
-		if (strncmp(file->name, "..", 2) == 0) 
+		if (strncmp(file->name, "..", 2) == 0)
 			return -2;
 	}
 
@@ -95,16 +95,16 @@ Result delete(void)
 	// Puzzle path
 	strcpy(path, cwd);
 	strcpy(path + strlen(path), file->name);
-	
+
 	Result ret = 0;
 
 	// Delete folder
 	if (file->isDir)
 		ret = fsRmdirRecursive(fsArchive, path);
 	// Delete file
-	else 
+	else
 		ret = fsRemove(fsArchive, path);
-	
+
 	return ret;
 }
 
@@ -115,7 +115,7 @@ void copy(int flag)
 	File * file = findindex(position);
 
 	// Not found
-	if (file == NULL) 
+	if (file == NULL)
 		return;
 
 	// Copy file source
@@ -180,12 +180,12 @@ int copy_file(char * a, char * b)
 			close(out);
 
 			// Insufficient copy
-			if (totalread != totalwrite) 
+			if (totalread != totalwrite)
 				result = -3;
 		}
 
 		// Output open error
-		else 
+		else
 			result = -2;
 
 		// Close input file
@@ -193,7 +193,7 @@ int copy_file(char * a, char * b)
 	}
 
 	// Input open error
-	else 
+	else
 		result = -1;
 
 	// Free memory
@@ -209,7 +209,7 @@ int copy_folder_recursive(char * a, char * b)
 	// Open working Directory
 	Handle dirHandle;
 	Result directory = FSUSER_OpenDirectory(&dirHandle, fsArchive, fsMakePath(PATH_ASCII, a));
-	
+
 	u32 entriesRead;
 	static char dname[1024];
 
@@ -224,14 +224,14 @@ int copy_folder_recursive(char * a, char * b)
 		{
 			static FS_DirectoryEntry info;
 			memset(&info, 0, sizeof(FS_DirectoryEntry));
-			
+
 			entriesRead = 0;
 			FSDIR_Read(dirHandle, &entriesRead, 1, &info);
-			
+
 			if (entriesRead)
 			{
 				u16_to_u8(&dname[0], info.name, 0xFF);
-				
+
 				// Valid filename
 				if (strlen(dname) > 0)
 				{
@@ -268,7 +268,7 @@ int copy_folder_recursive(char * a, char * b)
 					free(outbuffer);
 				}
 			}
-		} 
+		}
 		while(entriesRead);
 
 		// Close directory
@@ -277,9 +277,9 @@ int copy_folder_recursive(char * a, char * b)
 		// Return success
 		return 0;
 	}
-	
+
 	// Open error
-	else 
+	else
 		return -1;
 }
 
@@ -287,23 +287,23 @@ int copy_folder_recursive(char * a, char * b)
 int paste(void)
 {
 	// No copy source
-	if (copymode == NOTHING_TO_COPY) 
+	if (copymode == NOTHING_TO_COPY)
 		return -1;
 
 	// Source and target folder are identical
-	char * lastslash = NULL; 
-	int i = 0; 
-	
-	for(; i < strlen(copysource); i++) 
-		if (copysource[i] == '/') 
+	char * lastslash = NULL;
+	int i = 0;
+
+	for(; i < strlen(copysource); i++)
+		if (copysource[i] == '/')
 			lastslash = copysource + i;
-		
+
 	char backup = lastslash[1];
 	lastslash[1] = 0;
 	int identical = strcmp(copysource, cwd) == 0;
 	lastslash[1] = backup;
-	
-	if (identical) 
+
+	if (identical)
 		return -2;
 
 	// Source filename

@@ -1,17 +1,17 @@
 #include "cia.h"
 #include "clock.h"
 #include "common.h"
-#include "fs.h"
+#include "file/fs.h"
 #include "language.h"
 #include "power.h"
-#include "screen.h"
+#include "graphics/screen.h"
 #include "screenshot.h"
 #include "utils.h"
 #include "wifi.h"
 
-const char * platformString(AppPlatform platform) 
+const char * platformString(AppPlatform platform)
 {
-	switch(platform) 
+	switch(platform)
 	{
 		case PLATFORM_WII:
 			return "Wii";
@@ -23,12 +23,12 @@ const char * platformString(AppPlatform platform)
 			return "Wii U";
 		default:
 			return "Unknown";
-	}	
+	}
 }
 
-const char * categoryString(AppCategory category) 
+const char * categoryString(AppCategory category)
 {
-	switch(category) 
+	switch(category)
 	{
 		case CATEGORY_APP:
 			return "App";
@@ -49,7 +49,7 @@ const char * categoryString(AppCategory category)
 
 AppPlatform platformFromId(u16 id)
 {
-	switch(id) 
+	switch(id)
 	{
 		case 1:
 			return PLATFORM_WII;
@@ -64,33 +64,33 @@ AppPlatform platformFromId(u16 id)
     }
 }
 
-AppCategory categoryFromId(u16 id) 
+AppCategory categoryFromId(u16 id)
 {
-	if ((id & 0x8000) == 0x8000) 
+	if ((id & 0x8000) == 0x8000)
 		return CATEGORY_TWL;
 	else if ((id & 0x10) == 0x10)
 		return CATEGORY_SYSTEM;
-	else if ((id & 0x6) == 0x6) 
+	else if ((id & 0x6) == 0x6)
 		return CATEGORY_PATCH;
-	else if ((id & 0x4) == 0x4) 
+	else if ((id & 0x4) == 0x4)
 		return CATEGORY_DLC;
-	else if ((id & 0x2) == 0x2) 
+	else if ((id & 0x2) == 0x2)
 		return CATEGORY_DEMO;
-	
+
 	return CATEGORY_APP;
 }
 
-SMDH parseSMDH(const char * cia) 
+SMDH parseSMDH(const char * cia)
 {
 	SMDH smdh;
 	Handle handle;
-	
-	if (R_SUCCEEDED(fsOpen(&handle, cia, FS_OPEN_READ))) 
+
+	if (R_SUCCEEDED(fsOpen(&handle, cia, FS_OPEN_READ)))
 	{
 		u32 bytesRead = 0;
-		if ((R_SUCCEEDED(FSFILE_Read(handle, &bytesRead, 0, &smdh, sizeof(SMDH)))) && (bytesRead == sizeof(SMDH))) 
+		if ((R_SUCCEEDED(FSFILE_Read(handle, &bytesRead, 0, &smdh, sizeof(SMDH)))) && (bytesRead == sizeof(SMDH)))
 		{
-			if ((smdh.magic[0] == 'S') && (smdh.magic[1] == 'M') && (smdh.magic[2] == 'D') && (smdh.magic[3] == 'H')) 
+			if ((smdh.magic[0] == 'S') && (smdh.magic[1] == 'M') && (smdh.magic[2] == 'D') && (smdh.magic[3] == 'H'))
 			{
 				FSFILE_Close(handle);
 				return smdh;
@@ -98,7 +98,7 @@ SMDH parseSMDH(const char * cia)
 		}
 		FSFILE_Close(handle);
 	}
-	
+
 	return smdh;
 }
 
@@ -111,11 +111,11 @@ void putPixel565(u8 * dst, u8 x, u8 y, u16 v)
 
 u8* flipBitmap24(u8 * flip_bitmap, Bitmap * result)
 {
-	if (!result) 
+	if (!result)
 		return NULL;
-	
+
 	int x, y;
-	
+
 	for (y = 0; y < result->height; y++)
 	{
 		for (x = 0; x < result->width; x++)
@@ -124,7 +124,7 @@ u8* flipBitmap24(u8 * flip_bitmap, Bitmap * result)
 			*(u32*)(&(flip_bitmap[idx])) = ((*(u32*)&(result->pixels[(x + (result->height - y - 1) * result->width)*3]) & 0x00FFFFFF) | (*(u32*)(&(flip_bitmap[idx])) & 0xFF000000));
 		}
 	}
-		
+
 	return flip_bitmap;
 }
 
@@ -133,30 +133,30 @@ Cia getCiaInfo(const char * path, FS_MediaType mediaType)
 	Handle fileHandle;
 	AM_TitleEntry titleInfo;
 	Cia cia;
-	
+
 	Result ret = fsOpen(&fileHandle, path, FS_OPEN_READ);
-	
+
 	ret = AM_GetCiaFileInfo(mediaType, &titleInfo, fileHandle);
-	
+
 	ret = AM_GetCiaRequiredSpace(&cia.requiredSize, mediaType, fileHandle);
-	
+
 	ret = AM_GetCiaCoreVersion(&cia.coreVersion, fileHandle);
-	
+
 	if (R_FAILED(ret))
 		return cia;
-	
+
 	// Got the Bitmap stuff from lpp-3DS by Rinnegatamante, from here:
 	char* largeIconData = (char*)malloc(0x36C0);
 	ret = AM_GetCiaIcon((void*)largeIconData, fileHandle);
 	char * buffer = (char*)&largeIconData[0x24C0];
 	u16* icon_buffer = (u16*)buffer;
-	
+
 	Bitmap * bitmap = (Bitmap*)malloc(sizeof(Bitmap));
 	bitmap->width = 48;
 	bitmap->height = 48;
 	bitmap->pixels = (u8*)malloc(6912);
 	bitmap->bitperpixel = 24;
-	
+
 	// convert RGB565 to 24 Bitmap
 	int tile_size = 16;
 	int tile_number = 1;
@@ -165,7 +165,7 @@ Cia getCiaInfo(const char * path, FS_MediaType mediaType)
 	int i = 0;
 	int tile_x[16] = {0, 1, 0, 1, 2, 3, 2, 3, 0, 1, 0, 1, 2, 3, 2, 3};
 	int tile_y[16] = {0, 0, 1, 1, 0, 0, 1, 1, 2, 2, 3, 3, 2, 2, 3, 3};
-	
+
 	while (tile_number < 37)
 	{
 		while (i < (tile_size))
@@ -176,33 +176,33 @@ Cia getCiaInfo(const char * path, FS_MediaType mediaType)
 			putPixel565(bitmap->pixels, 4+tile_x[i-((tile_number - 1)<<6)] + extra_x, 4 + tile_y[i-((tile_number - 1)<<6)] + extra_y, icon_buffer[i + 48]);
 			i++;
 		}
-			
+
 		if (tile_number % 6 == 0)
 		{
 			extra_x = 0;
 			extra_y = extra_y + 8;
 		}
-		else 
+		else
 			extra_x = extra_x + 8;
-		
+
 		tile_number++;
 		tile_size = tile_size + 64;
 		i = i + 48;
 	}
-	
+
 	bitmap->magic = 0x4C494D47;
-	
+
 	u8 * real_pixels = 0;
 	u8 * flipped = (u8*)malloc(bitmap->width * bitmap->height * (bitmap->bitperpixel >> 3));
 	flipped = flipBitmap24(flipped, bitmap);
 	int length = (bitmap->width * bitmap->height) << 2;
-	
+
 	if (bitmap->bitperpixel == 24)
-	{		
+	{
 		real_pixels = (u8*)malloc(length);
 		int i = 0;
 		int z = 0;
-		
+
 		while (i < length)
 		{
 			real_pixels[i] = flipped[z+2];
@@ -212,13 +212,13 @@ Cia getCiaInfo(const char * path, FS_MediaType mediaType)
 			i = i + 4;
 			z = z + 3;
 		}
-		
+
 		free(flipped);
 	} // To here.
-	
-	for(u32 x = 0; x < bitmap->width; x++) 
+
+	for(u32 x = 0; x < bitmap->width; x++)
 	{
-		for(u32 y = 0; y < bitmap->height; y++) 
+		for(u32 y = 0; y < bitmap->height; y++)
 		{
 			u32 pos = (y * bitmap->width + x) * 4;
 
@@ -233,23 +233,23 @@ Cia getCiaInfo(const char * path, FS_MediaType mediaType)
 			real_pixels[pos + 3] = c1;
 		}
 	}
-	
+
 	screen_load_texture_untiled(TEXTURE_CIA_LARGE_ICON, real_pixels, (bitmap->width *  bitmap->height * 4), bitmap->width, bitmap->height, GPU_RGBA8, true);
-	
+
 	free(real_pixels);
-	
+
 	FSFILE_Close(fileHandle);
-	
+
 	cia.titleID = titleInfo.titleID;
 	cia.uniqueID = ((u32 *) &titleInfo.titleID)[0];
 	cia.mediaType = mediaType;
 	cia.platform = platformFromId(((u16*) &titleInfo.titleID)[3]);
 	cia.category = categoryFromId(((u16*) &titleInfo.titleID)[2]);
 	cia.version = titleInfo.version;
-	cia.size = titleInfo.size;																																															
-	
+	cia.size = titleInfo.size;
+
 	SMDH smdh = parseSMDH(path);
-	
+
 	if (smdh.titles != NULL)
 	{
 		char buffer[512];
@@ -272,28 +272,28 @@ Cia getCiaInfo(const char * path, FS_MediaType mediaType)
 			strcpy(cia.author, buffer);
 		}
 	}
-	
+
 	return cia;
 }
 
 Result removeTitle(u64 titleID, FS_MediaType media)
 {
 	u32 count = 0;
-	
+
 	Result ret = AM_GetTitleCount(media, &count);
 	if (R_FAILED(ret))
 		return ret;
-	
+
 	u32 read = 0;
 	u64 * titleIDs = malloc(count * sizeof(u64));
-	
+
 	ret = AM_GetTitleList(&read, media, count, titleIDs);
 	if (R_FAILED(ret))
 		return ret;
-	
-	for (unsigned int i = 0; i < read; i++) 
+
+	for (unsigned int i = 0; i < read; i++)
 	{
-		if (titleIDs[i] == titleID) 
+		if (titleIDs[i] == titleID)
 		{
 			ret = AM_DeleteAppTitle(media, titleID);
 			if (R_FAILED(ret))
@@ -301,12 +301,12 @@ Result removeTitle(u64 titleID, FS_MediaType media)
 			break;
 		}
 	}
-	
+
 	free(titleIDs);
-	
+
 	if (R_FAILED(ret))
 		return ret;
-	
+
 	return 0;
 }
 
@@ -317,42 +317,42 @@ Result installCIA(const char * path, FS_MediaType media, bool update)
 	Handle ciaHandle, fileHandle;
 	AM_TitleEntry title;
 	u32 read = 0x1000;
-	
+
 	Result ret = FSUSER_OpenFileDirectly(&fileHandle, ARCHIVE_SDMC, fsMakePath(PATH_ASCII, ""), fsMakePath(PATH_ASCII, path), FS_OPEN_READ, 0);
 	if (R_FAILED(ret))
 		return ret;
-	
+
 	ret = AM_GetCiaFileInfo(media, &title, fileHandle);
 	if (R_FAILED(ret))
 		return ret;
-	
+
 	if (!update) // As long as we aren't updating 3DShell, remove the title before installing.
 	{
 		ret = removeTitle(title.titleID, media);
 		if (R_FAILED(ret))
 			return ret;
 	}
-	
+
 	ret = FSFILE_GetSize(fileHandle, &size);
 	if (R_FAILED(ret))
 		return ret;
-	
+
 	ret = AM_StartCiaInstall(media, &ciaHandle);
 	if (R_FAILED(ret))
 		return ret;
-	
+
 	u8 * cia_buffer = malloc(read);
-	
-	for (u64 startSize = size; size != 0; size -= read) 
+
+	for (u64 startSize = size; size != 0; size -= read)
 	{
-		if (size < read) 
+		if (size < read)
 			read = size;
 		FSFILE_Read(fileHandle, &bytes, startSize-size, cia_buffer, read);
 		FSFILE_Write(ciaHandle, &bytes, startSize-size, cia_buffer, read, 0);
 	}
-	
+
 	free(cia_buffer);
-	
+
 	ret = AM_FinishCiaInstall(ciaHandle);
 	if (R_FAILED(ret))
 		return ret;
@@ -360,7 +360,7 @@ Result installCIA(const char * path, FS_MediaType media, bool update)
 	ret = svcCloseHandle(fileHandle);
 	if (R_FAILED(ret))
 		return ret;
-	
+
 	return 2;
 }
 
@@ -368,43 +368,43 @@ void launchCIA(u64 titleId, FS_MediaType mediaType)
 {
 	u8 param[0x300];
 	u8 hmac[0x20];
-	
+
 	APT_PrepareToDoApplicationJump(0, titleId, mediaType);
 	APT_DoApplicationJump(param, sizeof(param), hmac);
 }
 
 Result displayCIA(const char * path)
-{	
+{
 	bool update;
-	
+
 	if (strncmp(fileName, "3DShell.cia", 12) == 0)
 		update = true;
-	
+
 	screen_clear(GFX_TOP, RGBA8(245, 245, 245, 255));
 	screen_clear(GFX_BOTTOM, RGBA8(245, 245, 245, 255));
-	
+
 	int isInstalling = 0;
-	
+
 	Cia cia = getCiaInfo(path, MEDIATYPE_SD);
-	
+
 	char size[16];
 	getSizeString(size, cia.size);
-	
+
 	/*char requiredSpace[16];
 	getSizeString(size, cia.requiredSize);*/
-	
+
 	int pBar = 34, xlim = 300;
-		
+
 	while (aptMainLoop())
 	{
 		hidScanInput();
 		hidTouchRead(&touch);
-		
+
 		screen_begin_frame();
 		screen_select(GFX_BOTTOM);
-		
+
 		screen_draw_rect(0, 0, 400, 240, RGBA8(250, 250, 250, 255));
-		
+
 		if (isInstalling == 0)
 		{
 			screen_draw_string((300 - screen_get_string_width("INSTALL", 0.41f, 0.41f)), 220, 0.41f, 0.41f, RGBA8(0, 150, 136, 255), "INSTALL");
@@ -415,48 +415,48 @@ Result displayCIA(const char * path)
 			screen_draw_string((300 - screen_get_string_width("OPEN", 0.41f, 0.41f)), 220, 0.41f, 0.41f, RGBA8(0, 150, 136, 255), "OPEN");
 			screen_draw_string((300 - (screen_get_string_width("DONE", 0.41f, 0.41f) + screen_get_string_width("OPEN", 0.41f, 0.41f) + 20)), 220, 0.41f, 0.41f, RGBA8(0, 150, 136, 255), "DONE");
 		}
-		
+
 		screen_select(GFX_TOP);
-		
+
 		screen_draw_rect(0, 0, 400, 16, RGBA8(117, 117, 117, 255));
-		
+
 		drawWifiStatus(270, 2);
 		drawBatteryStatus(295, 2);
 		digitalTime();
-		
+
 		screen_draw_texture(TEXTURE_CIA_LARGE_ICON, 15, 28);
 		screen_draw_stringf(78, 28, 0.41f, 0.41f, RGBA8(0, 0, 0, 255), "%s v%d.%d.%d (%016llX)", fileName, ((cia.version & 0xFC00) >> 10), ((cia.version & 0x03F0) >> 4), (cia.version & 0x000F), cia.titleID);
 		screen_draw_stringf(78, 44, 0.41f, 0.41f, RGBA8(0, 0, 0, 255), "%s %s by %s", platformString(cia.platform), categoryString(cia.category), cia.author);
 		screen_draw_stringf(78, 60, 0.41f, 0.41f, RGBA8(0, 0, 0, 255), "%s", size);
-		
+
 		if (isInstalling == 0)
 		{
 			screen_draw_string(15, 86, 0.41f, 0.41f, RGBA8(0, 0, 0, 255), "Do you want to install this application?");
-			//screen_draw_stringf(15, 116, 0.41f, 0.41f, RGBA8(0, 0, 0, 255), "Program requires: %s", requiredSpace);	
+			//screen_draw_stringf(15, 116, 0.41f, 0.41f, RGBA8(0, 0, 0, 255), "Program requires: %s", requiredSpace);
 		}
 		else if (isInstalling == 1)
 		{
 			screen_draw_rect(100, 130, 200, 3, RGBA8(185, 224, 220, 255));
 			screen_draw_rect(pBar, 130, 66, 3, RGBA8(0, 150, 136, 255));
-		
+
 			// Boundary stuff
 			screen_draw_rect(0, 130, 100, 3, RGBA8(245, 245, 245, 255));
-			screen_draw_rect(300, 130, 66, 3, RGBA8(245, 245, 245, 255)); 
-	
+			screen_draw_rect(300, 130, 66, 3, RGBA8(245, 245, 245, 255));
+
 			screen_draw_string(((400 - screen_get_string_width("Installing...", 0.41f, 0.41f)) / 2), 146, 0.41f, 0.41f, RGBA8(0, 0, 0, 255), "Installing...");
-			
+
 			pBar += 4;
-		
+
 			if (pBar >= xlim)
 				pBar = 34;
-			
+
 			isInstalling = installCIA(path, MEDIATYPE_SD, update);
 		}
 		else
 			screen_draw_string(((400 - screen_get_string_width("App installed.", 0.41f, 0.41f)) / 2), 146, 0.41f, 0.41f, RGBA8(0, 0, 0, 255), "App installed.");
-		
+
 		screen_end_frame();
-		
+
 		if (isInstalling == 0)
 		{
 			if (((touchInRect((300 - screen_get_string_width("INSTALL", 0.41f, 0.41f)), 300, 220, 240)) && (kPressed & KEY_TOUCH)) || (kPressed & KEY_A))
@@ -483,11 +483,11 @@ Result displayCIA(const char * path)
 				break;
 			}
 		}
-				
+
 		if ((kHeld & KEY_L) && (kHeld & KEY_R))
 			captureScreenshot();
 	}
-	
+
 	// delete smdhIcon
 	screen_unload_texture(TEXTURE_CIA_LARGE_ICON);
 	return 0;

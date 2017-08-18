@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include <libnsbmp.h>
+#include "graphics/libnsbmp.h"
 
 //#include "utils/log.h"
 
@@ -267,7 +267,7 @@ bmp_result ico_analyse(ico_collection *ico, size_t size, uint8_t *data) {
 			return BMP_DATA_ERROR;
 
 		/* Ensure that we have sufficient data to read the bitmap */
-		if (image->bmp.buffer_size - ICO_DIR_ENTRY_SIZE >= 
+		if (image->bmp.buffer_size - ICO_DIR_ENTRY_SIZE >=
 		    ico->buffer_size - (ico->ico_data - data))
 			return BMP_INSUFFICIENT_DATA;
 
@@ -654,7 +654,7 @@ bmp_result bmp_decode(bmp_image *bmp) {
  *
  * When to use transparency is at the discretion of the decoding
  * application.
- * 
+ *
  * \param bmp		the BMP image to decode
  * \param colour	the colour to use as "transparent"
  * \return BMP_OK on success
@@ -1071,7 +1071,7 @@ static bmp_result bmp_decode_rle(bmp_image *bmp, uint8_t *data, int bytes, int s
 			}
 			if (length > pixels_left)
 				length = pixels_left;
-			
+
 			/* boundary checking */
 			if (data + 1 > end)
 				return BMP_INSUFFICIENT_DATA;

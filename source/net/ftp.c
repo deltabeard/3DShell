@@ -2,8 +2,8 @@
  * (https://tools.ietf.org/html/rfc959) and suggested implementation details
  * from https://cr.yp.to/ftp/filesystem.html
  */
-#include "fs.h"
-#include "ftp.h"
+#include "file/fs.h"
+#include "net/ftp.h"
 #include "utils.h"
 
 #include <arpa/inet.h>
@@ -277,7 +277,7 @@ static int ftp_set_socket_nonblocking(int fd)
 	rc = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 	if (rc != 0)
 		return -1;
-	
+
 	return 0;
 }
 
@@ -299,10 +299,10 @@ static int ftp_set_socket_options(int fd)
 
 	/* increase send buffer size */
 	rc = setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sock_buffersize, sizeof(sock_buffersize));
-  
+
 	if (rc != 0)
 		return -1;
-	
+
 	return 0;
 }
 
@@ -331,13 +331,13 @@ static void ftp_closesocket(int  fd, bool connected)
 		pollinfo.revents = 0;
 		poll(&pollinfo, 1, 250);
 	}
-  
+
 	/* set linger to 0 */
 	struct linger linger;
 	linger.l_onoff  = 1;
 	linger.l_linger = 0;
 	setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger));
-				  
+
 	/* close socket */
 	close(fd);
 }
@@ -419,7 +419,7 @@ static int ftp_session_open_file_read(ftp_session_t *session)
 	rc = fstat(fileno(session->fp), &st);
 	if (rc != 0)
 		return -1;
-	
+
 	session->filesize = st.st_size;
 
 	if (session->filepos != 0)
@@ -476,13 +476,13 @@ static int ftp_session_open_file_write(ftp_session_t *session, bool append)
 	session->fp = fopen(session->buffer, mode);
 	if (session->fp == NULL)
 		return -1;
-	
+
 	update_free_space();
 
 	/* it's okay if this fails */
 	errno = 0;
 	rc = setvbuf(session->fp, session->file_buffer, _IOFBF, FILE_BUFFERSIZE);
-	
+
 	/* check if this had REST but not APPE */
 	if (session->filepos != 0 && !append)
 	{
@@ -507,7 +507,7 @@ static ssize_t ftp_session_write_file(ftp_session_t *session)
 
 	/* write to file at current position */
 	rc = fwrite(session->buffer + session->bufferpos, 1, session->buffersize - session->bufferpos, session->fp);
-  
+
 	if (rc < 0)
 		return -1;
 
@@ -527,7 +527,7 @@ static void ftp_session_close_cwd(ftp_session_t *session)
 	/* close open directory pointer */
 	if (session->dp != NULL)
 		closedir(session->dp);
-	
+
 	session->dp = NULL;
 }
 
@@ -541,7 +541,7 @@ static int ftp_session_open_cwd(ftp_session_t *session)
 {
 	/* open current working directory */
 	session->dp = opendir(session->cwd);
-  
+
 	if (session->dp == NULL)
 		return -1;
 
@@ -635,7 +635,7 @@ static char* encode_path(const char *path, size_t *len, bool quotes)
 	for(i = 0; i < *len; ++i)
 	{
 		if (*path == '\n')
-			*p++ = 0; /* encoded \n is \0 */	
+			*p++ = 0; /* encoded \n is \0 */
 		else if (quotes && *path == '"')
 		{
 			/* encoded " is "" */
@@ -644,7 +644,7 @@ static char* encode_path(const char *path, size_t *len, bool quotes)
 		}
 		else
 			*p++ = *path;
-		
+
 		++path;
 	}
 
@@ -681,14 +681,14 @@ static void decode_path(ftp_session_t *session, size_t len)
 static void ftp_send_response_buffer(ftp_session_t *session, const char *buffer, size_t len)
 {
 	ssize_t rc, to_send;
-	
+
 	if (session->cmd_fd < 0)
 		return;
 
 	/* send response */
 	to_send = len;
 	rc = send(session->cmd_fd, buffer, to_send, 0);
-	
+
 	if (rc < 0)
 		ftp_session_close_cmd(session);
 	else if (rc != to_send)
@@ -710,7 +710,7 @@ static void ftp_send_response(ftp_session_t *session, int code, const char *fmt,
 	static char buffer[CMD_BUFFERSIZE];
 	ssize_t     rc;
 	va_list     ap;
-	
+
 	if (session->cmd_fd < 0)
 		return;
 
@@ -785,7 +785,7 @@ static void ftp_session_new(int listen_fd)
 	new_fd = accept(listen_fd, (struct sockaddr*)&addr, &addrlen);
 	if (new_fd < 0)
 		return;
-	
+
 	/* allocate a new session */
 	session = (ftp_session_t*)calloc(1, sizeof(ftp_session_t));
 	if (session == NULL)
@@ -918,7 +918,7 @@ static int ftp_session_connect(ftp_session_t *session)
 
 	/* connect to peer */
 	rc = connect(session->data_fd, (struct sockaddr*)&session->peer_addr, sizeof(session->peer_addr));
-  
+
 	if (rc != 0)
 	{
 		if (errno != EINPROGRESS)
@@ -967,7 +967,7 @@ static void ftp_session_read_command(ftp_session_t *session, int events)
 		{
 			/* discard in-band data */
 			rc = recv(session->cmd_fd, session->cmd_buffer, sizeof(session->cmd_buffer), 0);
-			if (rc < 0 && errno != EWOULDBLOCK)	
+			if (rc < 0 && errno != EWOULDBLOCK)
 				ftp_session_close_cmd(session);
 			return;
 		}
@@ -1039,7 +1039,7 @@ static void ftp_session_read_command(ftp_session_t *session, int events)
 			/* must have at least enough data for the delimiter */
 			if (session->cmd_buffersize < 1)
 			return;
-		
+
 			/* look for \r\n or \n delimiter */
 			for(i = 0; i < session->cmd_buffersize; ++i)
 			{
@@ -1085,7 +1085,7 @@ static void ftp_session_read_command(ftp_session_t *session, int events)
 			{
 				/* send header */
 				ftp_send_response(session, 502, "Invalid command \"");
-		
+
 				/* send command */
 				len = strlen(buffer);
 				buffer = encode_path(buffer, &len, false);
@@ -1237,9 +1237,9 @@ static ftp_session_t* ftp_session_poll(ftp_session_t *session)
 						ftp_send_response(session, 150, "Ready\r\n");
 					}
 					break;
-				
+
 				case DATA_TRANSFER_STATE:
-				
+
 					/* we need to transfer data */
 					if (pollinfo[1].revents & (POLLERR|POLLHUP))
 					{
@@ -1274,11 +1274,11 @@ static void update_free_space(void)
 	int rc;
 
 	rc = statvfs("sdmc:/", &st);
-  
+
 	if (rc == 0)
 	{
 		bytes_free = (double)st.f_bsize * st.f_bfree;
-	
+
 		if (bytes_free < 1000.0)
 			snprintf(buffer, sizeof(buffer), "%.0lfB", bytes_free);
 		else if (bytes_free < 10.0*KiB)
@@ -1316,10 +1316,10 @@ static int update_status(void)
 	rc = getsockname(listenfd, (struct sockaddr*)&serv_addr, &addrlen);
 	if (rc != 0)
 		return -1;
-		
+
 	rc = gethostname(hostname, sizeof(hostname));
-	if (rc != 0)	
-		return -1; 
+	if (rc != 0)
+		return -1;
 #endif
 	return 0;
 }
@@ -1341,11 +1341,11 @@ int ftp_init(void)
 		wifi = 0;
 
 	/* check if there was a wifi error */
-	
+
 	/* check if we need to exit */
 	if (ret != 0)
 		return -1;
-	
+
 #ifdef ENABLE_LOGGING
 	/* open log file */
 	FILE *fp = freopen("/ftpd.log", "wb", stderr);
@@ -1483,7 +1483,7 @@ void ftp_loop(void)
 	rc = poll(&pollinfo, 1, 0);
 	if (rc < 0)
 		return;
-	
+
 	else if (rc > 0)
 	{
 		if (pollinfo.revents & POLLIN)
@@ -1874,7 +1874,7 @@ static loop_status_t store_transfer(ftp_session_t *session)
 			}
 
 			ftp_session_set_state(session, COMMAND_STATE, CLOSE_PASV | CLOSE_DATA);
-		
+
 			if (rc == 0)
 				ftp_send_response(session, 226, "OK\r\n");
 			else
@@ -2064,7 +2064,7 @@ static void ftp_xfer_dir(ftp_session_t *session, const char *args, xfer_dir_mode
 				ftp_send_response(session, 550, "%s\r\n", strerror(rc));
 				return;
 			}
-			
+
 			/* get the base name */
 			base = strrchr(session->buffer, '/') + 1;
 
@@ -2086,7 +2086,7 @@ static void ftp_xfer_dir(ftp_session_t *session, const char *args, xfer_dir_mode
 					ftp_send_response(session, 425, "%s\r\n", strerror(EOVERFLOW));
 					return;
 				}
-				
+
 				memcpy(session->buffer + session->buffersize, buffer, len);
 				free(buffer);
 				len = session->buffersize + len;
@@ -2258,7 +2258,7 @@ FTP_DECLARE(CWD)
 		ftp_send_response(session, 550, "unavailable\r\n");
 		return;
 	}
-	
+
 	/* make sure it is a directory */
 	if (!S_ISDIR(st.st_mode))
 	{
@@ -2586,7 +2586,7 @@ FTP_DECLARE(PASV)
 	{
 		ftp_session_close_pasv(session);
 		ftp_send_response(session, 451, "\r\n");
-		return;	
+		return;
 	}
 
 	/* listen on the socket */
@@ -2654,7 +2654,7 @@ FTP_DECLARE(PORT)
 		ftp_send_response(session, 425, "%s\r\n", strerror(ENOMEM));
 		return;
 	}
-	
+
 	/* replace a,b,c,d,e,f with a.b.c.d\0e.f */
 	for(p = addrstr; *p; ++p)
 	{
@@ -2666,7 +2666,7 @@ FTP_DECLARE(PORT)
 			{
 				*p = 0;
 				portstr = p+1;
-			}	
+			}
 			++commas;
 		}
 	}
@@ -2753,7 +2753,7 @@ FTP_DECLARE(PWD)
 	/* encode the cwd */
 	len = strlen(session->cwd);
 	path = encode_path(session->cwd, &len, true);
-	
+
 	if (path != NULL)
 	{
 		i = sprintf(buffer, "257 \"");
@@ -2776,7 +2776,7 @@ FTP_DECLARE(PWD)
 		ftp_send_response_buffer(session, buffer, len);
 		return;
 	}
-	
+
 	ftp_send_response(session, 425, "%s\r\n", strerror(ENOMEM));
 }
 
@@ -2973,7 +2973,7 @@ FTP_DECLARE(RNTO)
 		ftp_send_response(session, 550, "failed to rename file/directory\r\n");
 		return;
 	}
-	
+
 	update_free_space();
 	ftp_send_response(session, 250, "OK\r\n");
 }

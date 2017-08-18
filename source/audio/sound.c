@@ -2,7 +2,7 @@
 	Code from undertale_techdemo by  Xavyrr and kitling. 
 */
 
-#include "sound.h"
+#include "audio/sound.h"
 
 void ogg_thread(void *data);
 

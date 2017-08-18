@@ -1,5 +1,5 @@
 #include "common.h"
-#include "fs.h"
+#include "file/fs.h"
 #include "utils.h"
 
 void installDirectories(void)
@@ -16,18 +16,18 @@ void installDirectories(void)
 			makeDir(fsArchive, "/3ds/3DShell/themes/default");
 		if (!(dirExists(fsArchive, "/3ds/3DShell/colours/")))
 			makeDir(fsArchive, "/3ds/3DShell/colours");
-	
+
 		if (fileExists(fsArchive, "/3ds/3DShell/lastdir.txt"))
 		{
 			char buf[250];
-		
+
 			FILE * read = fopen("/3ds/3DShell/lastdir.txt", "r");
 			fscanf(read, "%s", buf);
 			fclose(read);
-		
+
 			if (dirExists(fsArchive, buf)) // Incase a directory previously visited had been deleted, set start path to sdmc:/ to avoid errors.
 				strcpy(cwd, buf);
-			else 
+			else
 				strcpy(cwd, START_PATH);
 		}
 		else
@@ -35,7 +35,7 @@ void installDirectories(void)
 			writeFile("/3ds/3DShell/lastdir.txt", START_PATH);
 			strcpy(cwd, START_PATH); // Set Start Path to "sdmc:/" if lastDir.txt hasn't been created.
 		}
-	
+
 		/*if (!fileExists(fsArchive, "/3ds/3DShell/bgm.txt"))
 		{
 			setBgm(true);
@@ -43,17 +43,17 @@ void installDirectories(void)
 		else
 		{
 			int initBgm = 0;
-		
+
 			FILE * read = fopen("/3ds/3DShell/bgm.txt", "r");
 			fscanf(read, "%d", &initBgm);
 			fclose(read);
-		
+
 			if (initBgm == 0)
 				bgmEnable = false;
-			else 
+			else
 				bgmEnable = true;
 		}*/
-	
+
 		if (!fileExists(fsArchive, "/3ds/3DShell/sysProtection.txt")) // Initially set it to true
 		{
 			setConfig("/3ds/3DShell/sysProtection.txt", true);
@@ -62,17 +62,17 @@ void installDirectories(void)
 		else
 		{
 			int info = 0;
-		
+
 			FILE * read = fopen("/3ds/3DShell/sysProtection.txt", "r");
 			fscanf(read, "%d", &info);
 			fclose(read);
-		
+
 			if (info == 0)
 				sysProtection = false;
-			else 
+			else
 				sysProtection = true;
 		}
-		
+
 		if (!fileExists(fsArchive, "/3ds/3DShell/isHidden.txt")) // Initially set it to true
 		{
 			setConfig("/3ds/3DShell/isHidden.txt", true);
@@ -81,14 +81,14 @@ void installDirectories(void)
 		else
 		{
 			int info = 0;
-		
+
 			FILE * read = fopen("/3ds/3DShell/isHidden.txt", "r");
 			fscanf(read, "%d", &info);
 			fclose(read);
-		
+
 			if (info == 0)
 				isHiddenEnabled = false;
-			else 
+			else
 				isHiddenEnabled = true;
 		}
 	}
@@ -110,14 +110,14 @@ void getSizeString(char * string, uint64_t size) //Thanks TheOfficialFloW
 
 int touchGetX(void)
 {
-	touchPosition pos;	
+	touchPosition pos;
 	hidTouchRead(&pos);
 	return pos.px;
 }
 
 int touchGetY(void)
 {
-	touchPosition pos;	
+	touchPosition pos;
 	hidTouchRead(&pos);
 	return pos.py;
 }
@@ -141,7 +141,7 @@ u8 getRegion(void)
 {
 	u8 region;
 	CFGU_SecureInfoGetRegion(&region);
-	
+
 	return region;
 }
 
@@ -149,20 +149,20 @@ u8 getLanguage(void)
 {
 	u8 language;
 	CFGU_GetSystemLanguage(&language);
-	
+
 	return language;
 }
 
-const char * getUsername(void) 
+const char * getUsername(void)
 {
 	u8 * data = (u8*)malloc(28);
 	char * username = (char*)malloc(0x13);
-    
+
 	CFGU_GetConfigInfoBlk2(0x1C, 0x000A0000, data);
 
 	for (int i = 0; i < 0x13; i++)
 		username[i] = (char)((u16*)data)[i];
-	
+
 	return username;
 }
 
@@ -170,7 +170,7 @@ bool isN3DS(void)
 {
 	bool isNew3DS = 0;
 	APT_CheckNew3DS(&isNew3DS);
-    
+
 	if (isNew3DS)
 		return true;
 	else
@@ -180,9 +180,9 @@ bool isN3DS(void)
 void u16_to_u8(char* buf, const u16* input, size_t bufsize)
 {
 	ssize_t units = utf16_to_utf8((uint8_t*)buf, input, bufsize);
-	
-	if (units < 0) 
+
+	if (units < 0)
 		units = 0;
-	
+
 	buf[units] = 0;
 }
