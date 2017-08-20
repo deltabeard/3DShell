@@ -1,17 +1,17 @@
 /*
-	Modified code adapted from undertale_techdemo by  Xavyrr and kitling. 
+	Modified code adapted from undertale_techdemo by  Xavyrr and kitling.
 */
 #include <string.h>
 
-#include "ogg.h"
+#include "audio/ogg.h"
 
 void ogg_thread(void * data);
 
-struct audio * ogg_create(enum channel chan) 
+struct audio * ogg_create(enum channel chan)
 {
 	struct audio * new_audio = (struct audio *)malloc(sizeof(struct audio));
-	
-	if (new_audio == NULL) 
+
+	if (new_audio == NULL)
 		return NULL;
 
 	new_audio->block_pos = 0;
@@ -26,14 +26,14 @@ struct audio * ogg_create(enum channel chan)
 	new_audio->mix[1] = 1.0;
 
 	ndspChnSetInterp(new_audio->channel, NDSP_INTERP_LINEAR);
-	ndspChnSetRate(new_audio->channel, 44100);	
+	ndspChnSetRate(new_audio->channel, 44100);
 	ndspChnSetFormat(new_audio->channel, NDSP_FORMAT_STEREO_PCM16);
 	ndspChnSetMix(new_audio->channel, new_audio->mix);
 
 	return new_audio;
 }
 
-void ogg_load(const char * name, struct audio * audio) 
+void ogg_load(const char * name, struct audio * audio)
 {
 	const unsigned long sample_size = 4;
 	const unsigned long buffer_size = 40960;
@@ -42,8 +42,8 @@ void ogg_load(const char * name, struct audio * audio)
 	/// Copied from ivorbisfile_example.c
 	audio->filename = strdup(name);
 	FILE * mus = fopen(name, "rb");
-	
-	if ((audio->status = ov_open(mus, &audio->vf, NULL, 0)) < 0) 
+
+	if ((audio->status = ov_open(mus, &audio->vf, NULL, 0)) < 0)
 		return;
 
 	audio->waveBuf[0].nsamples =
@@ -59,7 +59,7 @@ void ogg_load(const char * name, struct audio * audio)
 	audio->thread = threadCreate(ogg_thread, audio, 0x1000, 0x3F, -2, false);
 }
 
-void ogg_loop(struct audio * audio) 
+void ogg_loop(struct audio * audio)
 {
 	// if (mus_failure <= 0) return;
 
@@ -70,24 +70,24 @@ void ogg_loop(struct audio * audio)
 		read:
 		audio->status = ov_read(&audio->vf, (char*)audio->waveBuf[audio->block].data_vaddr + audio->block_pos, size, &audio->section);
 
-		if (audio->status <= 0) 
+		if (audio->status <= 0)
 		{
 			ov_clear(&audio->vf);
 
-			if (audio->status < 0) 
+			if (audio->status < 0)
 				ndspChnReset(audio->channel);
-			else 
+			else
 			{
 				// Clarity? Forget that, I don't want to make an new variable. >_<
 				audio->status = ov_open(fopen(audio->filename, "rb"), &audio->vf, NULL, 0);
 				goto read; // TODO: Better way to do this?
 			}
 
-		} 
-		else 
+		}
+		else
 		{
 			audio->block_pos += audio->status;
-			if (audio->status == size) 
+			if (audio->status == size)
 			{
 				audio->block_pos = 0;
 				ndspChnWaveBufAdd(audio->channel, &audio->waveBuf[audio->block]);
@@ -97,12 +97,12 @@ void ogg_loop(struct audio * audio)
 	}
 }
 
-void ogg_thread(void * data) 
+void ogg_thread(void * data)
 {
 	struct audio * audio = (struct audio *)data;
-	
-	while (!(LightEvent_TryWait(&audio->stopEvent))) 
+
+	while (!(LightEvent_TryWait(&audio->stopEvent)))
 		ogg_loop(audio);
-    
+
 	LightEvent_Clear(&audio->stopEvent);
 }

@@ -11,7 +11,7 @@
 #include "mcu.h"
 #include "net/net.h"
 #include "music.h"
-#include "ogg.h"
+#include "audio/ogg.h"
 #include "power.h"
 #include "graphics/screen.h"
 #include "screenshot.h"
