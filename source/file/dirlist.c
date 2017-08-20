@@ -444,14 +444,16 @@ void displayFiles(void)
 	screen_end_frame();
 }
 
+/**
+ * Executes operation on file depending on the filetype.
+ */
 void openFile(void)
 {
+	char path[1024];
 	File * file = findindex(position);
 
 	if (file == NULL)
 		return;
-
-	char path[1024];
 
 	strcpy(fileName, file->name);
 
@@ -470,21 +472,22 @@ void openFile(void)
 			displayFiles();
 		}
 	}
-
-	else if ((strncmp(file->ext, "png", 3) == 0) || (strncmp(file->ext, "PNG", 3) == 0) || (strncmp(file->ext, "jpg", 3) == 0) || (strncmp(file->ext, "JPG", 3) == 0) ||
-	(strncmp(file->ext, "gif", 3) == 0) || (strncmp(file->ext, "GIF", 3) == 0) || (strncmp(file->ext, "bmp", 3) == 0) || (strncmp(file->ext, "BMP", 3) == 0))
+	else if (strncasecmp(file->ext, "png", 3) == 0 ||
+			strncasecmp(file->ext, "jpg", 3) == 0 ||
+			strncasecmp(file->ext, "gif", 3) == 0 ||
+			strncasecmp(file->ext, "bmp", 3) == 0)
 		displayImage(path);
-	else if ((strncmp(file->ext, "cia", 3) == 0) || (strncmp(file->ext, "CIA", 3) == 0))
+	else if (strncasecmp(file->ext, "cia", 3) == 0)
 		displayCIA(path);
-	else if ((strncmp(file->ext, "ogg", 3) == 0) || (strncmp(file->ext, "OGG", 3) == 0))
+	else if (strncasecmp(file->ext, "ogg", 3) == 0)
 		musicPlayer(path);
-	else if ((strncmp(file->ext, "zip", 3) == 0) || (strncmp(file->ext, "ZIP", 3) == 0))
+	else if (strncasecmp(file->ext, "zip", 3) == 0)
 	{
 		extractZip(path, cwd);
 		updateList(CLEAR);
 		displayFiles();
 	}
-	else if ((strncmp(file->ext, "txt", 3) == 0) || (strncmp(file->ext, "TXT", 3) == 0))
+	else if (strncasecmp(file->ext, "txt", 3) == 0)
 		displayText(path);
 }
 

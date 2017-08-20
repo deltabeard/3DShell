@@ -11,6 +11,11 @@
 
 static struct audio * music;
 
+/**
+ * Play an audio file.
+ *
+ * \param path	File path.
+ */
 void musicPlayer(char * path)
 {
 	music = mp3_create(SFX);
