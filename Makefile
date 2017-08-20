@@ -49,7 +49,7 @@ SOURCE_DIRS := source
 EXTRA_OUTPUT_FILES :=
 
 LIBRARY_DIRS := $(DEVKITPRO)/libctru $(DEVKITPRO)/portlibs/armv6k
-LIBRARIES := mpg123 vorbisidec ogg citro3d ctru m z
+LIBRARIES := mpg123 vorbisidec opusfile opus ogg citro3d ctru m z
 
 BUILD_FLAGS := -Wall -Wextra
 RUN_FLAGS :=

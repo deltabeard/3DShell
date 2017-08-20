@@ -6,14 +6,7 @@
 #include <3ds.h>
 #include <tremor/ivorbisfile.h>
 
-enum audio_file_types
-{
-	FILE_TYPE_WAV,
-	FILE_TYPE_OGG,
-	FILE_TYPE_MP3
-};
-
-struct audio 
+struct audio
 {
 	const char * filename;
 	OggVorbis_File vf;
@@ -29,7 +22,7 @@ struct audio
 	LightEvent stopEvent;
 };
 
-enum channel 
+enum channel
 {
 	BGM = 0,
 	SFX

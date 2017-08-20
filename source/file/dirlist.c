@@ -479,8 +479,6 @@ void openFile(void)
 		displayImage(path);
 	else if (strncasecmp(file->ext, "cia", 3) == 0)
 		displayCIA(path);
-	else if (strncasecmp(file->ext, "ogg", 3) == 0)
-		musicPlayer(path);
 	else if (strncasecmp(file->ext, "zip", 3) == 0)
 	{
 		extractZip(path, cwd);
@@ -489,6 +487,12 @@ void openFile(void)
 	}
 	else if (strncasecmp(file->ext, "txt", 3) == 0)
 		displayText(path);
+	/*
+	 * Using the magic number of the file to check if it's a supported audio
+	 * file.
+	 */
+	else
+		musicPlayer(path);
 }
 
 // Navigate to Folder
